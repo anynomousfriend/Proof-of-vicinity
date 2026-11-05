@@ -8,7 +8,7 @@
     "client": "vite --host",
     "dev": "concurrently -n \"SERVER,VITE\" -c \"cyan,magenta\" \"npm run server\" \"npm run client\"",
     "build": "vite build",
-    "test": "node --test tests/modem.test.js",
+    "test": "node --test tests/modem.test.js tests/hosted.test.js",
     "test:integration": "node --test tests/integration.test.js"
   },
   "keywords": [],
@@ -16,6 +16,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "express": "^5.3.0",
     "ggwave": "^0.4.0",
     "lucide-react": "^1.69.0",
@@ -33,5 +34,8 @@
     "qrcode-terminal": "^0.12.0",
     "tailwindcss": "^4.3.4",
     "vite": "^8.3.6"
+  },
+  "overrides": {
+    "zod": "^4.6.6"
   }
 }

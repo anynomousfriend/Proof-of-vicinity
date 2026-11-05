@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { createHostedCoordinator } from './lib/hostedCoordinator.js';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Volume2,
@@ -62,15 +63,31 @@ export default function App() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (import.meta.env.PROD) {
+      setNetworkInfo({ httpsUrl: window.location.origin, hosted: true });
+    } else {
     fetch('/api/network-info')
       .then((r) => r.json())
       .then((data) => setNetworkInfo(data))
       .catch(() => {});
+    }
 
-    const s = io();
+    const s = import.meta.env.PROD ? createHostedCoordinator() : io();
     setSocket(s);
 
-    s.on('connect', () => setConnected(true));
+    s.on('connect', () => { setConnected(true); setErrorMsg(''); });
+    s.on('connect_error', (error) => setErrorMsg('Coordinator unavailable: ' + error.message));
+    s.on('session-error', ({ reason }) => {
+      broadcastGeneration.current++;
+      pendingBroadcast.current = false;
+      broadcastLoopRef.current = false;
+      clearTimeout(expiryTimer.current);
+      stopChallengeTone();
+      setIsBroadcasting(false);
+      setIsStarting(false);
+      setActiveSession(null);
+      setErrorMsg(reason);
+    });
     s.on('disconnect', () => {
       setConnected(false);
       broadcastGeneration.current++;
@@ -163,6 +180,7 @@ export default function App() {
   };
 
   const handleStopBroadcast = () => {
+    socket?.emit('cancel-session');
     broadcastGeneration.current++;
     pendingBroadcast.current = false;
     setIsStarting(false);
@@ -252,7 +270,7 @@ export default function App() {
             {connected ? (
               <>
                 <Wifi className="w-3.5 h-3.5 text-emerald-400"/>
-                <span className="text-emerald-400">Socket Connected</span>
+                <span className="text-emerald-400">Coordinator Connected</span>
               </>
             ) : (
               <>
@@ -467,7 +485,7 @@ export default function App() {
                 </div>
                 <div className="space-y-1 text-center sm:text-left">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                    Connect Your Phone on Same Wi-Fi
+                    {networkInfo.hosted ? 'Open on Your Phone' : 'Connect Your Phone on Same Wi-Fi'}
                   </span>
                   <p className="text-xs text-slate-300">
                     Scan this QR code with your phone or open{' '}
@@ -476,7 +494,9 @@ export default function App() {
                     </code>
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    On your phone, tap <b>Advanced &rarr; Proceed</b> past the self-signed HTTPS warning so microphone access is unlocked.
+                    {networkInfo.hosted
+                      ? 'Open this link on both devices. Allow microphone access on the phone, and keep both devices nearby. Wi-Fi or mobile data works.'
+                      : <>On your phone, tap <b>Advanced &rarr; Proceed</b> past the self-signed HTTPS warning so microphone access is unlocked.</>}
                   </p>
                 </div>
               </div>
