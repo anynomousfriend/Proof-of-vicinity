@@ -2,6 +2,8 @@
 
 ## Vercel deployment
 
+Live app: https://proof-of-vicinity.vercel.app
+
 The production build includes a complete hosted coordinator at `/api/proximity`. It uses **private Vercel Blob storage** for shared session state and HTTPS status polling every 1.5 seconds while a challenge is active. Both devices can use any internet connection. Audio encoding/decoding remains entirely in their browsers. The QR code points at the current public origin.
 
 The Vercel project is `proof-of-vicinity`. Import the repository using Vite (`npm run build`, output `dist`) and attach a private Blob store to the project. Vercel supplies the server-only `BLOB_READ_WRITE_TOKEN`. The configured deployment uses Node 24. Supply `CRON_SECRET` as a random server-only environment variable for daily expired-record cleanup. Never give either secret a `VITE_` prefix or put it in source control.
@@ -53,7 +55,7 @@ npm run test:integration
 
 The modem tests use the real ggwave WASM encoder and decoder with a simulated Web Audio graph. They cover both protocols, microphone constraints, PCM conversions, level feedback, and cancellation during permission requests and pending playback. Integration tests use the generated local certificate as their trusted CA, exercise HTTPS/API and actual WSS connections, reject unknown nonces, and recompute the attestation hash received by both clients.
 
-Automated tests cannot establish physical speaker-to-microphone performance. Complete the two-device workflow above to validate the particular laptop, phone, browser, room, and volume. Browser UI verification in the agent session was blocked by the local self-signed certificate warning, which requires the user to accept it.
+Automated tests cannot establish physical speaker-to-microphone performance. Complete the two-device workflow above to validate the particular laptop, phone, browser, room, and volume. The public Vercel deployment was verified in-browser: coordinator connection, real audio initialization, broadcast controls, and attestation display. The browser success check submitted a test nonce through the API; it was not a physical phone microphone test. Live API checks also verified actual private Blob reads/writes, matching attestations, cancellation, and rejection of cancelled challenges.
 
 `npm run build` produces `dist/`. It can emit browser externalization notices for ggwave's Node-only `fs` and `path` branches; those branches are unused in browser mode. The local launch command is `npm run dev`; production uses the Vercel functions described above.
 
